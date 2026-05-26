@@ -1,646 +1,977 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Case File Converter</title>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>LexTrack Converter — Import Any File</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#0e0f11;--surface:#16181c;--surface2:#1e2128;--border:#2a2d35;
+  --accent:#00e5a0;--accent2:#0099ff;--warn:#ffaa00;--danger:#ff4d4d;
+  --text:#e8eaf0;--text2:#8b909e;--text3:#555b6a;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:.3;pointer-events:none;z-index:0}
+.container{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:2rem 1.5rem 4rem}
+header{display:flex;align-items:flex-start;gap:1rem;margin-bottom:2rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)}
+.logo-box{width:48px;height:48px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono);font-weight:600;font-size:16px;color:#000;letter-spacing:-1px}
+header h1{font-size:21px;font-weight:600;letter-spacing:-.5px;line-height:1.2}
+header p{font-size:13px;color:var(--text2);margin-top:3px;font-weight:300}
+.badge{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--accent);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.3);padding:4px 10px;border-radius:100px;white-space:nowrap;align-self:center}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1.25rem}
+.panel-label{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase;margin-bottom:1rem}
 
-  :root {
-    --bg: #0e0f11;
-    --surface: #16181c;
-    --surface2: #1e2128;
-    --border: #2a2d35;
-    --accent: #00e5a0;
-    --accent2: #0099ff;
-    --warn: #ffaa00;
-    --danger: #ff4d4d;
-    --text: #e8eaf0;
-    --text2: #8b909e;
-    --text3: #555b6a;
-    --mono: 'IBM Plex Mono', monospace;
-    --sans: 'IBM Plex Sans', sans-serif;
-  }
+/* FORMAT CARDS */
+.fmt-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem}
+.fmt-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.fmt-card:hover{border-color:var(--accent);background:rgba(0,229,160,.04)}
+.fmt-card.active{border-color:var(--accent);background:rgba(0,229,160,.08)}
+.fmt-card .fi{font-size:26px;margin-bottom:6px}
+.fmt-card .fn{font-size:12px;font-weight:500;color:var(--text)}
+.fmt-card .fd{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.fmt-card input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* DROP ZONE */
+.drop-zone{border:1.5px dashed var(--border);border-radius:10px;padding:2rem 1.5rem;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2)}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:rgba(0,229,160,.04)}
+.drop-zone h3{font-size:15px;font-weight:500;margin-bottom:4px}
+.drop-zone p{font-size:13px;color:var(--text2)}
+.drop-zone span{font-family:var(--mono);font-size:10px;color:var(--text3);display:block;margin-top:5px}
+#file-input-main{display:none}
+.divider{display:flex;align-items:center;gap:12px;margin:.75rem 0}
+.divider hr{flex:1;border:none;border-top:1px solid var(--border)}
+.divider span{font-family:var(--mono);font-size:11px;color:var(--text3)}
+textarea{width:100%;height:110px;resize:vertical;font-family:var(--mono);font-size:11.5px;background:var(--surface2);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:12px;line-height:1.6;outline:none;transition:border-color .15s}
+textarea:focus{border-color:var(--accent);color:var(--text)}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:1rem}
+.btn{cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:500;padding:9px 20px;border-radius:8px;border:none;transition:all .15s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-accent{background:var(--accent);color:#000}.btn-accent:hover{background:#00ffb3}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:var(--surface2);border-color:var(--text3)}.btn-ghost:disabled{opacity:.35;cursor:not-allowed}
+.btn-blue{background:rgba(0,153,255,.12);color:var(--accent2);border:1px solid rgba(0,153,255,.25)}.btn-blue:hover{background:rgba(0,153,255,.2)}
+.btn-green{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.25)}.btn-green:hover{background:rgba(0,229,160,.18)}
+.btn-orange{background:rgba(255,170,0,.12);color:var(--warn);border:1px solid rgba(255,170,0,.25)}.btn-orange:hover{background:rgba(255,170,0,.2)}
+.btn-red{background:rgba(255,77,77,.12);color:var(--danger);border:1px solid rgba(255,77,77,.25)}.btn-red:hover{background:rgba(255,77,77,.2)}
+.msg{border-radius:8px;padding:10px 14px;font-size:13px;margin:10px 0;font-family:var(--mono);display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.msg-err{background:rgba(255,77,77,.1);color:#ff6b6b;border:1px solid rgba(255,77,77,.2)}
+.msg-ok{background:rgba(0,229,160,.08);color:var(--accent);border:1px solid rgba(0,229,160,.2)}
+.msg-info{background:rgba(0,153,255,.08);color:var(--accent2);border:1px solid rgba(0,153,255,.2)}
+.msg-warn{background:rgba(255,170,0,.08);color:var(--warn);border:1px solid rgba(255,170,0,.2)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:1.25rem}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.stat-card .label{font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.stat-card .value{font-size:26px;font-weight:600;color:var(--text);font-family:var(--mono);line-height:1}
+.stat-card.hi .value{color:var(--accent)}
+.stat-card.ok .value{color:#00e5a0}
+.stat-card.warn .value{color:var(--warn)}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    padding: 0;
-  }
+/* MAPPING EDITOR */
+.map-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.map-field{font-family:var(--mono);font-size:11px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text2)}
+.map-arrow{color:var(--accent);font-family:var(--mono);font-size:14px;text-align:center}
+.map-field select{width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-family:var(--mono);font-size:11px;outline:none;font-weight:500}
+.map-field select:focus{border-color:var(--accent)}
 
-  /* GRID BG */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(var(--border) 1px, transparent 1px),
-      linear-gradient(90deg, var(--border) 1px, transparent 1px);
-    background-size: 40px 40px;
-    opacity: 0.3;
-    pointer-events: none;
-    z-index: 0;
-  }
+/* PREVIEW TABLE */
+.table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+thead tr{background:var(--surface2)}
+th{padding:9px 12px;text-align:left;color:var(--text3);font-weight:500;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.badge-pending{background:rgba(255,170,0,.12);color:var(--warn);border:1px solid rgba(255,170,0,.25);padding:2px 8px;border-radius:20px;font-size:10px}
+.badge-active{background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2);padding:2px 8px;border-radius:20px;font-size:10px}
+.badge-closed{background:rgba(255,77,77,.1);color:var(--danger);border:1px solid rgba(255,77,77,.2);padding:2px 8px;border-radius:20px;font-size:10px}
 
-  .container {
-    position: relative;
-    z-index: 1;
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem 4rem;
-  }
+.hidden{display:none!important}
+.col-tags{display:flex;gap:6px;flex-wrap:wrap}
+.col-tag{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:20px;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--text3);transition:all .15s;user-select:none}
+.col-tag.active{background:rgba(0,229,160,.1);border-color:rgba(0,229,160,.35);color:var(--accent)}
+.progress-wrap{background:var(--surface2);border-radius:20px;height:6px;margin:8px 0;overflow:hidden}
+.progress-bar{background:linear-gradient(90deg,var(--accent),var(--accent2));height:6px;border-radius:20px;transition:width .4s}
 
-  /* HEADER */
-  header {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 2.5rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
-  }
+/* LEXTRACK EXPORT PANEL */
+.lx-field{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.lx-field:last-child{border-bottom:none}
+.lx-key{font-family:var(--mono);font-size:11px;color:var(--accent2)}
+.lx-val{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.lx-badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(0,229,160,.1);color:var(--accent);border:1px solid rgba(0,229,160,.2)}
 
-  .logo-box {
-    width: 48px; height: 48px;
-    background: var(--accent);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    font-family: var(--mono);
-    font-weight: 600;
-    font-size: 18px;
-    color: #000;
-    letter-spacing: -1px;
-  }
-
-  header h1 {
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: -0.5px;
-    line-height: 1.2;
-  }
-  header p {
-    font-size: 13px;
-    color: var(--text2);
-    margin-top: 3px;
-    font-weight: 300;
-  }
-  .badge-offline {
-    margin-left: auto;
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--accent);
-    background: rgba(0,229,160,0.1);
-    border: 1px solid rgba(0,229,160,0.3);
-    padding: 4px 10px;
-    border-radius: 100px;
-    white-space: nowrap;
-    align-self: center;
-  }
-
-  /* PANELS */
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .panel-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-  }
-
-  /* DROP ZONE */
-  .drop-zone {
-    border: 1.5px dashed var(--border);
-    border-radius: 10px;
-    padding: 2.5rem 1.5rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: var(--surface2);
-  }
-  .drop-zone:hover, .drop-zone.drag {
-    border-color: var(--accent);
-    background: rgba(0,229,160,0.04);
-  }
-  .drop-icon {
-    font-size: 36px;
-    margin-bottom: 0.75rem;
-    display: block;
-  }
-  .drop-zone h3 {
-    font-size: 15px;
-    font-weight: 500;
-    margin-bottom: 4px;
-  }
-  .drop-zone p {
-    font-size: 13px;
-    color: var(--text2);
-  }
-  .drop-zone span {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text3);
-    display: block;
-    margin-top: 6px;
-  }
-
-  #file-input { display: none; }
-
-  /* DIVIDER */
-  .divider {
-    display: flex; align-items: center; gap: 12px;
-    margin: 1rem 0;
-  }
-  .divider hr { flex: 1; border: none; border-top: 1px solid var(--border); }
-  .divider span { font-family: var(--mono); font-size: 11px; color: var(--text3); }
-
-  /* TEXTAREA */
-  textarea {
-    width: 100%;
-    height: 120px;
-    resize: vertical;
-    font-family: var(--mono);
-    font-size: 11.5px;
-    background: var(--surface2);
-    color: var(--text2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px;
-    line-height: 1.6;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  textarea:focus { border-color: var(--accent); color: var(--text); }
-
-  /* BUTTONS */
-  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
-
-  .btn {
-    cursor: pointer;
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 500;
-    padding: 9px 20px;
-    border-radius: 8px;
-    border: none;
-    transition: all 0.15s;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .btn-accent {
-    background: var(--accent);
-    color: #000;
-  }
-  .btn-accent:hover { background: #00ffb3; }
-
-  .btn-ghost {
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-ghost:hover { background: var(--surface2); border-color: var(--text3); }
-  .btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
-
-  .btn-blue {
-    background: rgba(0,153,255,0.12);
-    color: var(--accent2);
-    border: 1px solid rgba(0,153,255,0.25);
-  }
-  .btn-blue:hover { background: rgba(0,153,255,0.2); }
-
-  .btn-green {
-    background: rgba(0,229,160,0.1);
-    color: var(--accent);
-    border: 1px solid rgba(0,229,160,0.25);
-  }
-  .btn-green:hover { background: rgba(0,229,160,0.18); }
-
-  /* MESSAGES */
-  .msg { border-radius: 8px; padding: 10px 14px; font-size: 13px; margin: 10px 0; font-family: var(--mono); display: flex; align-items: center; gap: 8px; }
-  .msg-err { background: rgba(255,77,77,0.1); color: #ff6b6b; border: 1px solid rgba(255,77,77,0.2); }
-  .msg-ok { background: rgba(0,229,160,0.08); color: var(--accent); border: 1px solid rgba(0,229,160,0.2); }
-  .msg-info { background: rgba(0,153,255,0.08); color: var(--accent2); border: 1px solid rgba(0,153,255,0.2); }
-
-  /* STATS */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 10px;
-    margin-bottom: 1.25rem;
-  }
-  .stat-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px;
-  }
-  .stat-card .label { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .stat-card .value { font-size: 28px; font-weight: 600; color: var(--text); font-family: var(--mono); line-height: 1; }
-  .stat-card.highlight .value { color: var(--accent); }
-
-  /* COLUMNS */
-  .col-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-  .col-tag {
-    font-family: var(--mono);
-    font-size: 11px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 10px;
-    cursor: pointer;
-    color: var(--text3);
-    transition: all 0.12s;
-    user-select: none;
-  }
-  .col-tag:hover { border-color: var(--text3); color: var(--text2); }
-  .col-tag.active {
-    background: rgba(0,229,160,0.1);
-    border-color: rgba(0,229,160,0.4);
-    color: var(--accent);
-  }
-
-  /* TABLE */
-  .table-wrap {
-    overflow-x: auto;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    font-family: var(--mono);
-    table-layout: fixed;
-  }
-  thead tr { background: var(--surface2); }
-  th {
-    padding: 9px 12px;
-    text-align: left;
-    color: var(--text3);
-    font-weight: 500;
-    font-size: 11px;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-transform: uppercase;
-  }
-  td {
-    padding: 8px 12px;
-    border-bottom: 1px solid rgba(42,45,53,0.5);
-    color: var(--text2);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 160px;
-  }
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover td { background: var(--surface2); color: var(--text); }
-
-  /* BADGES */
-  .badge {
-    display: inline-block;
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-family: var(--mono);
-    font-weight: 500;
-  }
-  .badge-pending { background: rgba(85,91,106,0.3); color: var(--text3); border: 1px solid var(--border); }
-  .badge-disposed { background: rgba(255,170,0,0.12); color: var(--warn); border: 1px solid rgba(255,170,0,0.25); }
-  .badge-allowed { background: rgba(0,229,160,0.1); color: var(--accent); border: 1px solid rgba(0,229,160,0.25); }
-  .badge-dismissed { background: rgba(255,77,77,0.1); color: var(--danger); border: 1px solid rgba(255,77,77,0.25); }
-
-  .hidden { display: none; }
-
-  /* FOOTER */
-  footer {
-    margin-top: 3rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--border);
-    font-size: 12px;
-    color: var(--text3);
-    font-family: var(--mono);
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
+footer{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:2rem;padding-top:1rem;border-top:1px solid var(--border)}
 </style>
 </head>
 <body>
 <div class="container">
 
-  <header>
-    <div class="logo-box">CF</div>
-    <div>
-      <h1>Case File Converter</h1>
-      <p>Parse double-encoded JSON court case files → clean JSON or CSV</p>
-    </div>
-    <div class="badge-offline">● OFFLINE READY</div>
-  </header>
+<header>
+  <div class="logo-box">LX</div>
+  <div>
+    <h1>LexTrack Converter</h1>
+    <p>Convert eCourts exports, Excel, PDF, CSV, TXT &rarr; LexTrack format &mdash; import directly into your case manager</p>
+  </div>
+  <div class="badge">&#9679; OFFLINE</div>
+</header>
 
-  <!-- INPUT PANEL -->
+<!-- STEP 1: FORMAT SELECT + UPLOAD -->
+<div class="panel">
+  <div class="panel-label">01 &mdash; Choose File Format &amp; Upload</div>
+
+  <div class="fmt-grid">
+    <div class="fmt-card active" id="fmt-ecourts" onclick="setFmt('ecourts')">
+      <div class="fi">&#128229;</div>
+      <div class="fn">eCourts</div>
+      <div class="fd">.txt / .json</div>
+      <input type="file" accept=".txt,.json" onchange="readFile(event.target.files[0],'ecourts')"/>
+    </div>
+    <div class="fmt-card" id="fmt-pdf" onclick="setFmt('pdf')">
+      <div class="fi">&#128196;</div>
+      <div class="fn">PDF</div>
+      <div class="fd">.pdf</div>
+      <input type="file" accept=".pdf" onchange="readFile(event.target.files[0],'pdf')"/>
+    </div>
+    <div class="fmt-card" id="fmt-excel" onclick="setFmt('excel')">
+      <div class="fi">&#128202;</div>
+      <div class="fn">Excel / CSV</div>
+      <div class="fd">.xlsx / .csv</div>
+      <input type="file" accept=".csv,.xlsx,.xls" onchange="readFile(event.target.files[0],'excel')"/>
+    </div>
+    <div class="fmt-card" id="fmt-csv" onclick="setFmt('csv')">
+      <div class="fi">&#128462;</div>
+      <div class="fn">CSV Text</div>
+      <div class="fd">.csv</div>
+      <input type="file" accept=".csv,.tsv,.txt" onchange="readFile(event.target.files[0],'csv')"/>
+    </div>
+    <div class="fmt-card" id="fmt-any" onclick="setFmt('any')">
+      <div class="fi">&#127981;</div>
+      <div class="fn">Auto Detect</div>
+      <div class="fd">Any file</div>
+      <input type="file" accept="*" onchange="readFile(event.target.files[0],'any')"/>
+    </div>
+  </div>
+
+  <!-- BIG DROP ZONE -->
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input-main').click()">
+    <span style="font-size:32px;display:block;margin-bottom:.5rem">&#8659;</span>
+    <h3>Drop file here or click to browse</h3>
+    <p>eCourts .txt &bull; eCourts .pdf &bull; Excel .xlsx &bull; CSV .csv &bull; JSON .json</p>
+    <span>All processing happens offline &mdash; no data leaves your device</span>
+  </div>
+  <input type="file" id="file-input-main" accept="*" onchange="readFile(this.files[0],'any')"/>
+
+  <div class="divider"><hr/><span>or paste raw text</span><hr/></div>
+
+  <textarea id="paste-area" placeholder="Paste eCourts JSON, CSV data, or any case list text here..."></textarea>
+
+  <div id="msg-area"></div>
+  <div class="btn-row">
+    <button class="btn btn-accent" onclick="parseAndConvert()">&#9654; Parse &amp; Convert</button>
+    <button class="btn btn-ghost" onclick="clearAll()">&#215; Clear</button>
+    <button class="btn btn-orange" onclick="downloadTemplate()">&#8659; CSV Template</button>
+  </div>
+</div>
+
+<!-- RESULTS (hidden until parse) -->
+<div id="results" class="hidden">
+
+  <!-- STEP 2: CONVERSION STATS -->
   <div class="panel">
-    <div class="panel-label">01 — Input File</div>
+    <div class="panel-label">02 &mdash; Conversion Result</div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <div id="conversion-msg"></div>
 
-    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-      <span class="drop-icon">📂</span>
-      <h3>Drop your file here</h3>
-      <p>Click to browse and select your file</p>
-      <span>.txt · .json supported</span>
-    </div>
-    <input type="file" id="file-input" accept=".txt,.json">
+    <!-- PROGRESS BAR -->
+    <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+    <div id="progress-label" style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:.75rem"></div>
 
-    <div class="divider"><hr><span>or paste content</span><hr></div>
-
-    <textarea id="paste-area" placeholder="Paste raw file content here..."></textarea>
-
-    <div id="msg-area"></div>
-
-    <div class="btn-row">
-      <button class="btn btn-accent" onclick="parse()">⚡ Parse &amp; Preview</button>
-      <button class="btn btn-ghost" onclick="clearAll()">✕ Clear</button>
+    <!-- SAMPLE LEXTRACK OUTPUT -->
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1rem">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:.75rem;letter-spacing:.08em">SAMPLE CONVERTED RECORD (first case)</div>
+      <div id="sample-output"></div>
     </div>
   </div>
 
-  <!-- RESULTS -->
-  <div id="results" class="hidden">
-
-    <!-- STATS -->
-    <div class="panel">
-      <div class="panel-label">02 — Summary</div>
-      <div class="stats-grid" id="stats-grid"></div>
-    </div>
-
-    <!-- EXPORT -->
-    <div class="panel">
-      <div class="panel-label">03 — Export</div>
-
-      <p style="font-size:13px; color:var(--text2); margin-bottom:1rem;">Select columns to include:</p>
-      <div class="col-tags" id="col-tags"></div>
-
-      <div class="btn-row" style="margin-top:1.25rem;">
-        <button class="btn btn-green" onclick="downloadJSON()">⬇ Download JSON</button>
-        <button class="btn btn-blue" onclick="downloadCSV()">⬇ Download CSV</button>
-        <button class="btn btn-ghost" onclick="copyJSON()">⎘ Copy JSON</button>
-      </div>
-    </div>
-
-    <!-- PREVIEW -->
-    <div class="panel">
-      <div class="panel-label">04 — Preview <span style="color:var(--text3); font-size:10px;">(first 20 rows)</span></div>
-      <div class="table-wrap">
-        <table id="preview-table"></table>
-      </div>
-    </div>
-
+  <!-- STEP 3: FIELD MAPPING -->
+  <div class="panel">
+    <div class="panel-label">03 &mdash; Field Mapping <span style="color:var(--text3);font-size:10px">(auto-detected — adjust if needed)</span></div>
+    <div id="mapping-editor"></div>
   </div>
 
-  <footer>
-    <span>Case File Converter · Offline</span>
-    <span>No data leaves your device</span>
-  </footer>
+  <!-- STEP 4: DOWNLOAD / IMPORT -->
+  <div class="panel">
+    <div class="panel-label">04 &mdash; Export to LexTrack</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem">
+      <div style="background:var(--surface2);border:1px solid rgba(0,229,160,.25);border-radius:10px;padding:16px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:8px;letter-spacing:.06em">RECOMMENDED &mdash; DIRECT IMPORT</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.5">Download the LexTrack JSON file and import it directly into LexTrack using the <strong style="color:var(--text)">&uarr; Import</strong> button.</div>
+        <button class="btn btn-accent" style="width:100%" onclick="downloadLextrackJSON()">&#8659; Download LexTrack JSON</button>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--accent2);margin-bottom:8px;letter-spacing:.06em">OTHER FORMATS</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.5">Download as CSV to open in Excel, or as cleaned raw JSON with all original fields.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-blue" onclick="downloadCSV()">&#8659; CSV</button>
+          <button class="btn btn-green" onclick="downloadRawJSON()">&#8659; Raw JSON</button>
+          <button class="btn btn-ghost" onclick="copyLextrackJSON()">&#8266; Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP BY STEP GUIDE -->
+    <div style="background:rgba(0,229,160,.04);border:1px solid rgba(0,229,160,.15);border-radius:10px;padding:1rem">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--accent);margin-bottom:.75rem;letter-spacing:.06em">HOW TO IMPORT INTO LEXTRACK</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;color:var(--text2)">
+        <div style="display:flex;gap:8px"><span style="background:var(--accent);color:#000;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">1</span><span>Click <strong style="color:var(--text)">"&#8659; Download LexTrack JSON"</strong> above</span></div>
+        <div style="display:flex;gap:8px"><span style="background:var(--accent);color:#000;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">2</span><span>Open <strong style="color:var(--text)">LexTrack</strong> on your device</span></div>
+        <div style="display:flex;gap:8px"><span style="background:var(--accent);color:#000;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">3</span><span>Click <strong style="color:var(--text)">"&#8659; Import Cases"</strong> button in header</span></div>
+        <div style="display:flex;gap:8px"><span style="background:var(--accent);color:#000;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">4</span><span>Select the downloaded <code style="font-family:var(--mono);font-size:10px;color:var(--accent)">.json</code> file &mdash; done!</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: PREVIEW -->
+  <div class="panel">
+    <div class="panel-label">05 &mdash; Preview <span style="color:var(--text3);font-size:10px">(first 20 rows after conversion)</span></div>
+    <div class="table-wrap">
+      <table id="preview-table"></table>
+    </div>
+  </div>
 
 </div>
 
+<footer>
+  <span>LexTrack Converter &mdash; Case File Converter</span>
+  <span>All processing is offline. No data leaves your device.</span>
+</footer>
+</div>
+
 <script>
-let parsedCases = [];
-let allCols = [];
-let activeCols = new Set();
+// ============================================================
+// STATE
+// ============================================================
+var rawCases = [];       // parsed from input file (original fields)
+var lexCases = [];       // converted to LexTrack format
+var colMapping = {};     // source field -> LexTrack field
+var sourceFields = [];   // all fields found in source data
+var currentFmt = 'ecourts';
 
-const PREFERRED_COLS = ['cino','type_name','case_no','petparty_name','resparty_name','establishment_name','district_name','state_name','date_next_list','date_of_decision','disp_name','purpose_name','court_no_desg_name'];
+var LEXTRACK_FIELDS = [
+  {key:'title',      label:'Case Title / Parties', required:true},
+  {key:'cnr',        label:'CNR Number'},
+  {key:'caseNo',     label:'Case Number'},
+  {key:'client',     label:'Client / Petitioner'},
+  {key:'opposite',   label:'Opposite Party / Respondent'},
+  {key:'court',      label:'Court Name'},
+  {key:'caseType',   label:'Case Type'},
+  {key:'nextDate',   label:'Next Date of Hearing'},
+  {key:'stage',      label:'Stage / Purpose'},
+  {key:'status',     label:'Status'},
+  {key:'sections',   label:'Sections / Provisions'},
+  {key:'remarks',    label:'Remarks / Notes'},
+];
 
-function showMsg(text, type) {
-  document.getElementById('msg-area').innerHTML =
-    `<div class="msg msg-${type==='ok'?'ok':type==='info'?'info':'err'}">
-      <span>${type==='ok'?'✓':type==='info'?'ℹ':'✗'}</span> ${text}
-    </div>`;
+// Auto-mapping: source field patterns -> LexTrack field
+var AUTO_MAP = [
+  {lx:'cnr',       patterns:['cino','cnr','cnrno','cnr_no','cnrnumber']},
+  {lx:'caseNo',    patterns:['case_no','caseno','casenumber','case_number','reg_no','regno']},
+  {lx:'client',    patterns:['petparty_name','petitioner','petparty','complainant','plaintiff','client','lpetparty_name']},
+  {lx:'opposite',  patterns:['resparty_name','respondent','resparty','accused','defendant','opposite','lresparty_name']},
+  {lx:'court',     patterns:['court_no_desg_name','court','courtname','court_name','establishment_name']},
+  {lx:'caseType',  patterns:['type_name','casetype','case_type','type','ltype_name']},
+  {lx:'nextDate',  patterns:['date_next_list','nextdate','next_date','hearingdate','hearing_date','date_next']},
+  {lx:'stage',     patterns:['purpose_name','purpose','stage','purposename','next_purpose']},
+  {lx:'sections',  patterns:['sections','acts','section','under']},
+  {lx:'remarks',   patterns:['remarks','notes','comments','observation']},
+  {lx:'status',    patterns:['disp_name','status','disposal','case_status']},
+  {lx:'title',     patterns:['title','case_title','parties','casetitle']},
+];
+
+// ============================================================
+// HELPERS
+// ============================================================
+function genId(){ return Date.now().toString(36)+Math.random().toString(36).substr(2); }
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showMsg(html, type){
+  var cls = type==='ok'?'msg-ok':type==='info'?'msg-info':type==='warn'?'msg-warn':'msg-err';
+  var icon = type==='ok'?'&#10003;':type==='info'?'&#8505;':type==='warn'?'&#9888;':'&#10005;';
+  document.getElementById('msg-area').innerHTML = '<div class="msg '+cls+'"><span>'+icon+'</span><span>'+html+'</span></div>';
 }
 
-// ── Smart multi-level parser ──────────────────────────────────────────────────
-function smartParse(raw) {
-  raw = raw.trim();
+function setFmt(f){
+  currentFmt=f;
+  ['ecourts','pdf','excel','csv','any'].forEach(function(id){
+    document.getElementById('fmt-'+id).classList.toggle('active',id===f);
+  });
+}
 
-  // Try each strategy in order
-  const strategies = [
-    () => tryArray(JSON.parse(raw)),
-    () => {
-      // Strip outer quotes if file was saved with them
-      if ((raw[0]==='"'&&raw[raw.length-1]==='"')||(raw[0]==="'"&&raw[raw.length-1]==="'"))
-        return tryArray(JSON.parse(raw.slice(1,-1)));
-    },
-    () => {
-      // Double parse: string → string → array
-      const once = JSON.parse(raw);
-      if (typeof once === 'string') return tryArray(JSON.parse(once));
-    },
-    () => {
-      // Triple parse
-      const once = JSON.parse(raw);
-      if (typeof once === 'string') {
-        const twice = JSON.parse(once);
-        if (typeof twice === 'string') return tryArray(JSON.parse(twice));
+function setProgress(pct, label){
+  document.getElementById('progress-bar').style.width=pct+'%';
+  document.getElementById('progress-label').textContent=label||'';
+}
+
+// ============================================================
+// FILE READING
+// ============================================================
+function readFile(file, fmt){
+  if(!file) return;
+  setFmt(fmt||'any');
+  var name = file.name.toLowerCase();
+  showMsg('Reading <strong>'+esc(file.name)+'</strong> ('+Math.round(file.size/1024)+' KB)...','info');
+
+  // PDF
+  if(name.endsWith('.pdf')){
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var bytes = new Uint8Array(ev.target.result);
+      var text = '';
+      for(var i=0;i<bytes.length;i++){
+        var b=bytes[i];
+        if(b>=32||b===10||b===13) text+=String.fromCharCode(b);
       }
-    },
-    // Replace escaped quotes and try again
-    () => tryArray(JSON.parse(raw.replace(/\\"/g, '"'))),
-    // Extract JSON array substring
-    () => {
-      const start = raw.indexOf('['), end = raw.lastIndexOf(']');
-      if (start !== -1 && end !== -1) return tryArray(JSON.parse(raw.slice(start, end+1)));
-    }
-  ];
-
-  for (const strategy of strategies) {
-    try {
-      const result = strategy();
-      if (result && result.length > 0) return result;
-    } catch(e) { /* try next */ }
+      document.getElementById('paste-area').value = text;
+      showMsg('PDF loaded — <strong>'+file.name+'</strong>. Click <strong>Parse &amp; Convert</strong>.','info');
+    };
+    reader.readAsArrayBuffer(file);
+    return;
   }
 
-  throw new Error('Unable to parse file. Please check the file format.');
-}
-
-function tryArray(val) {
-  if (!val) return null;
-  if (Array.isArray(val)) {
-    if (val.length === 0) return val;
-    if (typeof val[0] === 'object') return val;
-    if (typeof val[0] === 'string') {
-      return val.map(item => typeof item === 'object' ? item : JSON.parse(item));
-    }
+  // Excel XLSX
+  if(name.endsWith('.xlsx')||name.endsWith('.xls')){
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        var data = new Uint8Array(ev.target.result);
+        var result = parseXLSX(data);
+        if(result){
+          document.getElementById('paste-area').value = result;
+          showMsg('Excel loaded — '+file.name+'. Click <strong>Parse &amp; Convert</strong>.','info');
+        } else {
+          showMsg('Excel parsing failed. Please save as CSV in Excel first, then upload the CSV.','err');
+        }
+      }catch(e){
+        showMsg('Excel error: '+e.message+'. Save as CSV and try again.','err');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    return;
   }
-  return null;
-}
 
-// ── Parse & build UI ──────────────────────────────────────────────────────────
-function parse() {
-  const raw = document.getElementById('paste-area').value;
-  if (!raw.trim()) { showMsg('Please upload a file or paste content first.', 'err'); return; }
-  try {
-    parsedCases = smartParse(raw);
-    if (!parsedCases.length) { showMsg('Parsed but found 0 records.', 'err'); return; }
-    buildUI();
-    showMsg(`Successfully parsed ${parsedCases.length} case records.`, 'ok');
-  } catch(e) {
-    showMsg('Parse failed: ' + e.message, 'err');
-  }
-}
-
-function buildUI() {
-  allCols = Object.keys(parsedCases[0]);
-  activeCols = new Set(PREFERRED_COLS.filter(c => allCols.includes(c)));
-  if (activeCols.size === 0) allCols.forEach(c => activeCols.add(c));
-  buildStats();
-  buildColTags();
-  buildTable();
-  document.getElementById('results').classList.remove('hidden');
-  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function buildStats() {
-  const disposed = parsedCases.filter(c => c.disp_name && c.disp_name.trim()).length;
-  const pending = parsedCases.length - disposed;
-  const states  = new Set(parsedCases.map(c=>c.state_name).filter(Boolean)).size;
-  const courts  = new Set(parsedCases.map(c=>c.establishment_name).filter(Boolean)).size;
-  document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card highlight"><div class="label">Total</div><div class="value">${parsedCases.length}</div></div>
-    <div class="stat-card"><div class="label">Disposed</div><div class="value">${disposed}</div></div>
-    <div class="stat-card"><div class="label">Pending</div><div class="value">${pending}</div></div>
-    <div class="stat-card"><div class="label">States</div><div class="value">${states}</div></div>
-    <div class="stat-card"><div class="label">Courts</div><div class="value">${courts}</div></div>
-  `;
-}
-
-function buildColTags() {
-  document.getElementById('col-tags').innerHTML = allCols.map(col =>
-    `<div class="col-tag ${activeCols.has(col)?'active':''}" onclick="toggleCol(this,'${col}')">${col}</div>`
-  ).join('');
-}
-
-function toggleCol(el, col) {
-  activeCols.has(col) ? activeCols.delete(col) : activeCols.add(col);
-  el.classList.toggle('active');
-  buildTable();
-}
-
-function dispBadge(val) {
-  if (!val || !val.trim()) return '<span class="badge badge-pending">Pending</span>';
-  const v = val.toUpperCase();
-  if (v.includes('ALLOW') || v.includes('GRANTED') || v.includes('ACQUIT'))
-    return `<span class="badge badge-allowed">${val}</span>`;
-  if (v.includes('DISMISS') || v.includes('REJECT') || v.includes('CONVICT'))
-    return `<span class="badge badge-dismissed">${val}</span>`;
-  return `<span class="badge badge-disposed">${val}</span>`;
-}
-
-function buildTable() {
-  const cols = allCols.filter(c => activeCols.has(c));
-  let html = '<thead><tr>' + cols.map(c=>`<th title="${c}">${c}</th>`).join('') + '</tr></thead><tbody>';
-  parsedCases.slice(0, 20).forEach(row => {
-    html += '<tr>' + cols.map(c => {
-      const v = row[c] ?? '';
-      if (c === 'disp_name') return `<td>${dispBadge(v)}</td>`;
-      return `<td title="${v}">${v}</td>`;
-    }).join('') + '</tr>';
-  });
-  document.getElementById('preview-table').innerHTML = html + '</tbody>';
-}
-
-// ── Export ────────────────────────────────────────────────────────────────────
-function getExportData() {
-  const cols = allCols.filter(c => activeCols.has(c));
-  return parsedCases.map(row => {
-    const o = {}; cols.forEach(c => o[c] = row[c] ?? null); return o;
-  });
-}
-
-function downloadJSON() {
-  const data = getExportData();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  dl(blob, 'cases_clean.json');
-  showMsg('JSON downloaded!', 'ok');
-}
-
-function downloadCSV() {
-  const data = getExportData();
-  if (!data.length) return;
-  const cols = Object.keys(data[0]);
-  const esc = v => {
-    if (v == null) return '';
-    const s = String(v);
-    return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g,'""')}"` : s;
-  };
-  const csv = [cols.map(esc).join(','), ...data.map(r => cols.map(c => esc(r[c])).join(','))].join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM for Excel
-  dl(blob, 'cases_clean.csv');
-  showMsg('CSV downloaded!', 'ok');
-}
-
-function dl(blob, name) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-}
-
-function copyJSON() {
-  if (!navigator.clipboard) {
-    // Fallback for older browsers
-    const ta = document.createElement('textarea');
-    ta.value = JSON.stringify(getExportData(), null, 2);
-    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    showMsg('Copied to clipboard!', 'ok'); return;
-  }
-  navigator.clipboard.writeText(JSON.stringify(getExportData(), null, 2))
-    .then(() => showMsg('Copied to clipboard!', 'ok'))
-    .catch(() => showMsg('Copy failed — use Download instead.', 'err'));
-}
-
-function clearAll() {
-  document.getElementById('paste-area').value = '';
-  document.getElementById('msg-area').innerHTML = '';
-  document.getElementById('results').classList.add('hidden');
-  document.getElementById('file-input').value = '';
-  parsedCases = [];
-}
-
-// ── Drag & Drop ───────────────────────────────────────────────────────────────
-const dz = document.getElementById('drop-zone');
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
-dz.addEventListener('drop', e => {
-  e.preventDefault(); dz.classList.remove('drag');
-  if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
-});
-document.getElementById('file-input').addEventListener('change', e => {
-  if (e.target.files[0]) readFile(e.target.files[0]);
-});
-
-function readFile(file) {
-  const reader = new FileReader();
-  reader.onload = ev => {
+  // Text / CSV / JSON / TXT
+  var reader = new FileReader();
+  reader.onload = function(ev){
     document.getElementById('paste-area').value = ev.target.result;
-    showMsg(`Loaded: ${file.name} (${(file.size/1024).toFixed(1)} KB) — click Parse & Preview`, 'info');
+    showMsg('File loaded — <strong>'+esc(file.name)+'</strong>. Click <strong>Parse &amp; Convert</strong>.','info');
   };
-  reader.readAsText(file, 'UTF-8');
+  reader.readAsText(file,'UTF-8');
+}
+
+// Drag & drop
+var dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave',function(){dz.classList.remove('drag');});
+dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0],'any');});
+
+// ============================================================
+// MINIMAL XLSX PARSER (pure JS, no libraries)
+// Extracts text content from XLSX by reading the XML inside
+// ============================================================
+function parseXLSX(arrayBuffer){
+  // XLSX is a ZIP file. We need to extract xl/worksheets/sheet1.xml
+  // Simple approach: scan for text content between XML tags
+  var bytes = new Uint8Array(arrayBuffer);
+  // Convert to string (Latin1 is fine for ZIP scanning)
+  var str = '';
+  for(var i=0;i<Math.min(bytes.length,2000000);i++) str+=String.fromCharCode(bytes[i]);
+
+  // Find sharedStrings (xl/sharedStrings.xml) - contains the text values
+  var ssStart = str.indexOf('xl/sharedStrings.xml');
+  if(ssStart < 0) ssStart = str.indexOf('sharedStrings');
+
+  // Extract all <t> tag content from the ZIP
+  // In XLSX, cell values are referenced by index to sharedStrings
+  // Simple approach: just extract all readable strings
+  var strings = [];
+  var tRe = /<t[^>]*>([^<]+)<\/t>/g;
+  var m;
+  while((m=tRe.exec(str))!==null){
+    strings.push(m[1].replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"'));
+  }
+
+  if(strings.length === 0) return null;
+
+  // Also extract <v> values (numbers/dates)
+  var vRe = /<v>([^<]+)<\/v>/g;
+  var numVals = [];
+  while((m=vRe.exec(str))!==null) numVals.push(m[1]);
+
+  // Try to reconstruct rows using row/cell references
+  // Look for row data: <row r="1">...<c r="A1" ..><v>0</v></c>...
+  var rowRe = /<row[^>]*r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g;
+  var rows = {};
+  var maxRow = 0;
+  var maxCol = 0;
+  while((m=rowRe.exec(str))!==null){
+    var rowNum = parseInt(m[1]);
+    var rowContent = m[2];
+    rows[rowNum] = rows[rowNum]||{};
+    maxRow = Math.max(maxRow,rowNum);
+    var cellRe = /<c r="([A-Z]+)(\d+)"([^>]*)>([\s\S]*?)<\/c>/g;
+    var cm;
+    while((cm=cellRe.exec(rowContent))!==null){
+      var col = cm[1]; var t = cm[3]; var inner = cm[4];
+      var colNum = colLetterToNum(col);
+      maxCol = Math.max(maxCol,colNum);
+      var valM = /<v>([^<]*)<\/v>/.exec(inner);
+      var val = '';
+      if(valM){
+        if(t.indexOf('t="s"')>=0||t.indexOf('s"')>=0||cm[3].indexOf('"s"')>=0){
+          // Shared string reference
+          var idx = parseInt(valM[1]);
+          val = strings[idx]||valM[1];
+        } else {
+          val = valM[1];
+        }
+      }
+      // Check for inline string
+      var isM = /<is><t>([^<]*)<\/t>/.exec(inner);
+      if(isM) val = isM[1];
+      rows[rowNum][colNum] = val;
+    }
+  }
+
+  if(maxRow === 0 || maxCol === 0){
+    // Fallback: if we couldn't parse rows, return strings as CSV
+    if(strings.length > 0){
+      return strings.join('\n');
+    }
+    return null;
+  }
+
+  // Build CSV from rows
+  var csv = [];
+  for(var r=1;r<=maxRow;r++){
+    var rowArr = [];
+    for(var c=1;c<=maxCol;c++){
+      var v = (rows[r]&&rows[r][c]!==undefined)?rows[r][c]:'';
+      if(typeof v === 'string' && (v.includes(',') || v.includes('"'))) v='"'+v.replace(/"/g,'""')+'"';
+      rowArr.push(v);
+    }
+    // Skip completely empty rows
+    if(rowArr.some(function(v){return String(v).trim();})) csv.push(rowArr.join(','));
+  }
+  return csv.join('\n');
+}
+
+function colLetterToNum(col){
+  var n=0;
+  for(var i=0;i<col.length;i++) n=n*26+(col.charCodeAt(i)-64);
+  return n;
+}
+
+// ============================================================
+// MAIN PARSE & CONVERT
+// ============================================================
+function parseAndConvert(){
+  var raw = document.getElementById('paste-area').value.trim();
+  if(!raw){ showMsg('Please upload a file or paste content first.','err'); return; }
+
+  setProgress(10,'Detecting format...');
+
+  // Detect format
+  var fmt = detectFormat(raw);
+  showMsg('Detected format: <strong>'+fmt+'</strong> &mdash; parsing...','info');
+
+  var parsed = [];
+  try{
+    if(fmt==='ecourts_json' || fmt==='json'){
+      parsed = parseECourtsJSON(raw);
+    } else if(fmt==='csv'){
+      parsed = parseCSVToObjects(raw);
+    } else if(fmt==='ecourts_txt'){
+      parsed = parseECourtsTXT(raw);
+    } else {
+      // Try everything
+      parsed = tryAllFormats(raw);
+    }
+  }catch(e){
+    showMsg('Parse error: '+e.message,'err');
+    setProgress(0,'');
+    return;
+  }
+
+  if(!parsed || !parsed.length){
+    showMsg('No records found. Try a different format or use the Paste method with copied text from the file.','err');
+    setProgress(0,'');
+    return;
+  }
+
+  rawCases = parsed;
+  setProgress(50,'Converting to LexTrack format...');
+
+  // Auto-detect column mapping
+  sourceFields = Object.keys(rawCases[0]);
+  buildAutoMapping();
+
+  // Convert
+  applyMappingAndConvert();
+
+  setProgress(100,'Done!');
+  setTimeout(function(){setProgress(0,'');},2000);
+
+  buildStatsUI();
+  buildMappingEditor();
+  buildPreviewTable();
+  buildSampleOutput();
+
+  document.getElementById('results').classList.remove('hidden');
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+  showMsg('<strong>'+rawCases.length+' records</strong> parsed and converted to LexTrack format. Review below and download.','ok');
+}
+
+// ============================================================
+// FORMAT DETECTION
+// ============================================================
+function detectFormat(raw){
+  var t = raw.trim();
+  // eCourts JSON: heavily escaped with cino field
+  if(t.includes('cino') && (t.includes('\\\\') || t.includes('petparty_name'))) return 'ecourts_txt';
+  // Clean JSON array
+  if((t.startsWith('[') || t.startsWith('"[') || t.startsWith("'[")) && t.includes('cino')) return 'ecourts_json';
+  // Generic JSON
+  if(t.startsWith('[') || t.startsWith('{')) return 'json';
+  // CSV: has commas and a header row
+  var lines = t.split('\n');
+  if(lines.length > 1 && lines[0].includes(',')) return 'csv';
+  // eCourts TXT with heavy escaping
+  if(t.includes('cino') || t.includes('petparty') || t.includes('resparty')) return 'ecourts_txt';
+  return 'unknown';
+}
+
+// ============================================================
+// eCOURTS JSON PARSER (handles all escaping levels)
+// ============================================================
+function parseECourtsJSON(raw){
+  raw = raw.trim();
+  // Try progressive JSON unescaping
+  var cur = raw;
+  for(var lvl=0;lvl<6;lvl++){
+    try{
+      var p = JSON.parse(cur);
+      if(Array.isArray(p)){
+        // Each element might be a string or object
+        var out = [];
+        p.forEach(function(item){
+          if(typeof item === 'object' && item !== null) out.push(item);
+          else if(typeof item === 'string'){
+            var s = item;
+            for(var i=0;i<4;i++){
+              try{ out.push(JSON.parse(s)); break; }
+              catch(e){ s=s.replace(/\\"/g,'"').replace(/\\\\/g,'\\'); }
+            }
+          }
+        });
+        if(out.length > 0) return out;
+      }
+      if(typeof p === 'string'){ cur = p; continue; }
+    }catch(e){}
+    // Strip outer quote
+    if(cur.charAt(0)==='"'){
+      try{ cur = JSON.parse(cur); }
+      catch(e){ cur = cur.slice(1,-1).replace(/\\"/g,'"').replace(/\\\\/g,'\\'); }
+    } else break;
+  }
+  // Fallback to regex extraction
+  return parseECourtsTXT(raw);
+}
+
+// ============================================================
+// eCOURTS TXT REGEX PARSER (proven approach)
+// Works on any level of escaping
+// ============================================================
+function parseECourtsTXT(raw){
+  var text = raw.replace(/\r?\n/g,'');
+
+  function getAll(fieldName){
+    var re = new RegExp('\\\\*"'+escapeRegex(fieldName)+'\\\\*"\\\\*:\\\\*"([^"\\\\]+?)\\\\*"','g');
+    var results=[], m;
+    while((m=re.exec(text))!==null) results.push(m[1].trim());
+    return results;
+  }
+  function getAllNum(fieldName){
+    var re = new RegExp('\\\\*"'+escapeRegex(fieldName)+'\\\\*"\\\\*:(\\d+)','g');
+    var results=[], m;
+    while((m=re.exec(text))!==null) results.push(m[1]);
+    return results;
+  }
+  function escapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+
+  var cinos   = getAll('cino');
+  var pets    = getAll('petparty_name');
+  var res     = getAll('resparty_name');
+  var dates   = getAll('date_next_list');
+  var purps   = getAll('purpose_name');
+  var courts  = getAll('court_no_desg_name');
+  var types   = getAll('type_name');
+  var cnos    = getAll('case_no');
+  var disps   = getAll('disp_name');
+  var estabs  = getAll('establishment_name');
+  var states  = getAll('state_name');
+  var dists   = getAll('district_name');
+
+  if(!cinos.length) return [];
+
+  var n = Math.min(cinos.length, pets.length||cinos.length, res.length||cinos.length);
+  var out = [];
+  for(var i=0;i<n;i++){
+    out.push({
+      cino:       cinos[i]||'',
+      case_no:    cnos[i]||'',
+      petparty_name: pets[i]||'',
+      resparty_name: res[i]||'',
+      court_no_desg_name: courts[i]||estabs[i]||'',
+      type_name:  types[i]||'',
+      date_next_list: dates[i]||'',
+      purpose_name: purps[i]||'',
+      disp_name:  disps[i]||'',
+      establishment_name: estabs[i]||'',
+      state_name: states[i]||'',
+      district_name: dists[i]||'',
+    });
+  }
+  return out;
+}
+
+// ============================================================
+// CSV PARSER
+// ============================================================
+function parseCSVToObjects(text){
+  var lines = text.split(/\r?\n/).filter(function(l){return l.trim();});
+  if(lines.length < 2) throw new Error('CSV needs at least a header row and one data row.');
+  var headers = csvSplit(lines[0]).map(function(h){return h.trim().toLowerCase().replace(/[^a-z0-9_]/g,'_');});
+  var out = [];
+  for(var i=1;i<lines.length;i++){
+    var vals = csvSplit(lines[i]);
+    if(!vals.some(function(v){return v.trim();})) continue;
+    var obj = {};
+    headers.forEach(function(h,j){ obj[h] = vals[j]?vals[j].trim():''; });
+    out.push(obj);
+  }
+  return out;
+}
+
+function csvSplit(line){
+  var result=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){
+    var ch=line[i];
+    if(ch==='"'&&!inQ){inQ=true;}
+    else if(ch==='"'&&inQ&&line[i+1]==='"'){cur+='"';i++;}
+    else if(ch==='"'&&inQ){inQ=false;}
+    else if(ch===','&&!inQ){result.push(cur);cur='';}
+    else cur+=ch;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ============================================================
+// TRY ALL FORMATS
+// ============================================================
+function tryAllFormats(raw){
+  var fns = [parseECourtsJSON, function(r){return parseCSVToObjects(r);}, parseECourtsTXT];
+  for(var i=0;i<fns.length;i++){
+    try{ var r=fns[i](raw); if(r&&r.length) return r; }catch(e){}
+  }
+  return [];
+}
+
+// ============================================================
+// AUTO COLUMN MAPPING
+// ============================================================
+function buildAutoMapping(){
+  colMapping = {};
+  var srcLower = sourceFields.map(function(f){return f.toLowerCase();});
+
+  LEXTRACK_FIELDS.forEach(function(lf){
+    // Find best matching source field
+    var rule = AUTO_MAP.find(function(r){return r.lx===lf.key;});
+    if(!rule) return;
+    for(var i=0;i<rule.patterns.length;i++){
+      var idx = srcLower.indexOf(rule.patterns[i]);
+      if(idx>=0){ colMapping[lf.key]=sourceFields[idx]; return; }
+    }
+    // Fuzzy: partial match
+    for(var i=0;i<rule.patterns.length;i++){
+      var pat = rule.patterns[i];
+      var found = sourceFields.find(function(f){ return f.toLowerCase().indexOf(pat)>=0||pat.indexOf(f.toLowerCase())>=0; });
+      if(found){ colMapping[lf.key]=found; return; }
+    }
+  });
+}
+
+// ============================================================
+// APPLY MAPPING AND CONVERT
+// ============================================================
+function applyMappingAndConvert(){
+  var today = todayStr();
+  lexCases = rawCases.map(function(raw, i){
+    function get(lxKey){ var src=colMapping[lxKey]; return src&&raw[src]!=null?String(raw[src]).trim():''; }
+
+    var cnr   = get('cnr') || raw.cino || '';
+    var caseNo = get('caseNo') || raw.case_no || raw.caseno || '';
+    var pet    = fixName(get('client') || raw.petparty_name || '');
+    var resp   = fixName(get('opposite') || raw.resparty_name || '');
+    var title  = get('title') || (pet&&resp ? pet+' vs. '+resp : pet||resp||caseNo||cnr||'Case '+(i+1));
+    var courtRaw = get('court') || raw.court_no_desg_name || raw.establishment_name || '';
+    var nd     = fixDate(get('nextDate') || raw.date_next_list || '');
+    var statusRaw = get('status') || raw.disp_name || '';
+    var status = deriveStatus(statusRaw, nd, today);
+    var ct     = get('caseType') || raw.type_name || '';
+    if(ct) ct = mapCaseType(ct);
+
+    return {
+      id:        cnr ? cnr+'_imp_'+i : genId(),
+      cnr:       cnr,
+      caseNo:    caseNo,
+      title:     title,
+      client:    pet,
+      opposite:  resp,
+      court:     mapCourt(courtRaw),
+      caseType:  ct || guessCaseType(cnr, courtRaw),
+      nextDate:  nd,
+      stage:     get('stage') || raw.purpose_name || '',
+      status:    status,
+      sections:  get('sections') || '',
+      remarks:   get('remarks') || (courtRaw ? 'Court: '+courtRaw : ''),
+      createdAt: today,
+      lastSynced:null,
+    };
+  });
+}
+
+// ============================================================
+// FIELD TRANSFORMERS
+// ============================================================
+function fixDate(d){
+  if(!d) return '';
+  d = String(d).replace(/\s/g,'');
+  // YYYY-MMDD -> YYYY-MM-DD
+  var m = d.match(/^(\d{4})-(\d{2})(\d{2})$/);
+  if(m) return m[1]+'-'+m[2]+'-'+m[3];
+  if(/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  // DD/MM/YYYY -> YYYY-MM-DD
+  m = d.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m) return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+  // Excel serial date
+  if(/^\d{5}$/.test(d)){
+    var serial = parseInt(d);
+    var dt = new Date(Date.UTC(1900,0,1) + (serial-2)*86400000);
+    return dt.toISOString().split('T')[0];
+  }
+  return d;
+}
+
+function fixName(s){
+  if(!s) return '';
+  return s.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/\s+/g,' ').trim();
+}
+
+function deriveStatus(dispName, nd, today){
+  if(!dispName || !dispName.trim()){
+    if(nd && nd >= today) return 'Active';
+    if(nd && nd < today) return 'Adjourned';
+    return 'Active';
+  }
+  var d = dispName.toUpperCase();
+  if(d.includes('ALLOW')||d.includes('GRANT')||d.includes('ACQUIT')||d.includes('DISPOSED')) return 'Decided';
+  if(d.includes('DISMISS')||d.includes('REJECT')||d.includes('CONVICT')) return 'Decided';
+  if(d.includes('WITHDRAW')) return 'Withdrawn';
+  if(d.includes('STAY')) return 'Stayed';
+  return nd && nd >= today ? 'Active' : 'Adjourned';
+}
+
+function mapCourt(c){
+  if(!c) return '';
+  var u = c.toUpperCase().replace(/\s+/g,' ');
+  if(/JMFC|SUB.DIVISION.*MAGIST|JUDICIAL.MAGIST.*1ST|JUDICIAL.MAGIST.*IST|SUB DIV.*JUD/.test(u)) return 'JMFC Rajpura';
+  if(/ACJM/.test(u)) return 'ACJM Rajpura';
+  if(/CIVIL.JUDGE.*JR|CIVIL.JUDGE.*JUNIOR|JUNIOR.*CIVIL|JR.*CIVIL/.test(u)) return 'Civil Judge (Jr. Div.) Rajpura';
+  if(/CIVIL.JUDGE.*SR|CIVIL.JUDGE.*SENIOR|ADDITIONAL.*CIVIL|ADDL.*CIVIL|ADD.*CIVIL/.test(u)) return 'Civil Judge (Sr. Div.) Rajpura';
+  if(/SESSION/.test(u)) return 'Sessions Court Patiala';
+  if(/HIGH.COURT/.test(u)) return 'Punjab & Haryana High Court';
+  if(/PRINCIPAL.*JUDGE|FAMILY|PRINCIPAL.*COURT/.test(u)) return 'Other';
+  if(/MAGISTRATE/.test(u)) return 'JMFC Rajpura';
+  if(/CIVIL/.test(u)) return 'Civil Judge (Jr. Div.) Rajpura';
+  // Return cleaned original
+  return c.replace(/\s+/g,' ').trim();
+}
+
+function mapCaseType(t){
+  if(!t) return '';
+  var u = t.toUpperCase();
+  if(/COMA|^CC$|COMP/.test(u)) return 'Criminal Case';
+  if(/138|NI\b/.test(u)) return 'NI Act Sec 138';
+  if(/^CS$|CIVIL.SUIT/.test(u)) return 'Civil Suit';
+  if(/BAIL/.test(u)) return 'Bail Application';
+  if(/MAC|MOTOR/.test(u)) return 'Motor Accident';
+  if(/EXE/.test(u)) return 'Execution Petition';
+  if(/FAM|MATRIM/.test(u)) return 'Family Matter';
+  if(/NDPS|CRM|CHA|CHI/.test(u)) return 'Criminal Case';
+  if(/RFA|CRA|RSA|REV/.test(u)) return 'Appeal';
+  if(/WP|PIL/.test(u)) return 'Writ Petition';
+  return t;
+}
+
+function guessCaseType(cnr, court){
+  var u = (cnr+court).toUpperCase();
+  if(/COMA|138|NI\b/.test(u)) return 'Criminal Case';
+  if(/CS\b|CIVIL/.test(u)) return 'Civil Suit';
+  if(/BAIL/.test(u)) return 'Bail Application';
+  if(/CRM|CHA|CHI/.test(u)) return 'Criminal Case';
+  return '';
+}
+
+// ============================================================
+// UI BUILDERS
+// ============================================================
+function buildStatsUI(){
+  var total = lexCases.length;
+  var active = lexCases.filter(function(c){return c.status==='Active';}).length;
+  var adj = lexCases.filter(function(c){return c.status==='Adjourned';}).length;
+  var decided = lexCases.filter(function(c){return c.status==='Decided';}).length;
+  var withCNR = lexCases.filter(function(c){return c.cnr;}).length;
+  var withDate = lexCases.filter(function(c){return c.nextDate;}).length;
+  document.getElementById('stats-grid').innerHTML =
+    '<div class="stat-card hi"><div class="label">Total</div><div class="value">'+total+'</div></div>'
+    +'<div class="stat-card ok"><div class="label">Active</div><div class="value">'+active+'</div></div>'
+    +'<div class="stat-card warn"><div class="label">Adjourned</div><div class="value">'+adj+'</div></div>'
+    +'<div class="stat-card"><div class="label">Decided</div><div class="value">'+decided+'</div></div>'
+    +'<div class="stat-card"><div class="label">With CNR</div><div class="value">'+withCNR+'</div></div>'
+    +'<div class="stat-card"><div class="label">With Date</div><div class="value">'+withDate+'</div></div>';
+}
+
+function buildMappingEditor(){
+  var srcOptions = ['<option value="">(skip)</option>'].concat(sourceFields.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+'</option>';}));
+  var html = '<div class="map-grid" style="font-family:var(--mono);font-size:10px;color:var(--text3);padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:8px"><span>LEXTRACK FIELD</span><span></span><span>SOURCE COLUMN (from your file)</span></div>';
+  LEXTRACK_FIELDS.forEach(function(lf){
+    var curSrc = colMapping[lf.key]||'';
+    var opts = srcOptions.map(function(o){return o.replace('value="'+esc(curSrc)+'"','value="'+esc(curSrc)+'" selected');}).join('');
+    html += '<div class="map-grid" style="margin-bottom:6px">'
+      +'<div class="map-field" style="display:flex;align-items:center;justify-content:space-between"><span>'+esc(lf.key)+'</span>'+(lf.required?'<span style="font-size:9px;color:var(--danger)">required</span>':'')+'</div>'
+      +'<div class="map-arrow">&rarr;</div>'
+      +'<div class="map-field"><select onchange="updateMapping(\''+lf.key+'\',this.value)">'+opts+'</select></div>'
+      +'</div>';
+  });
+  document.getElementById('mapping-editor').innerHTML = html;
+}
+
+function updateMapping(lxKey, srcField){
+  colMapping[lxKey] = srcField || null;
+  applyMappingAndConvert();
+  buildPreviewTable();
+  buildSampleOutput();
+  buildStatsUI();
+}
+
+function buildSampleOutput(){
+  if(!lexCases.length){ document.getElementById('sample-output').innerHTML=''; return; }
+  var c = lexCases[0];
+  var html = '';
+  LEXTRACK_FIELDS.forEach(function(lf){
+    var v = c[lf.key]||'';
+    if(!v) return;
+    html += '<div class="lx-field"><div class="lx-key">'+esc(lf.key)+'</div><div class="lx-val">'+esc(String(v).substring(0,80))+'</div></div>';
+  });
+  document.getElementById('sample-output').innerHTML = html || '<div style="color:var(--text3);font-size:12px">No data</div>';
+}
+
+function buildPreviewTable(){
+  var cols = ['title','cnr','court','nextDate','stage','status','caseType'];
+  var html = '<thead><tr>'+cols.map(function(c){return '<th>'+esc(c)+'</th>';}).join('')+'</tr></thead><tbody>';
+  var today = todayStr();
+  lexCases.slice(0,20).forEach(function(c){
+    html += '<tr>'+cols.map(function(col){
+      var v = c[col]||'';
+      if(col==='status'){
+        var cls = v==='Active'?'badge-active':v==='Decided'?'badge-closed':'badge-pending';
+        return '<td><span class="'+cls+'">'+esc(v)+'</span></td>';
+      }
+      if(col==='nextDate'&&v){
+        var clr = v<today?'color:var(--danger)':'';
+        return '<td style="'+clr+'">'+esc(v)+'</td>';
+      }
+      return '<td title="'+esc(v)+'">'+esc(String(v).substring(0,40))+'</td>';
+    }).join('')+'</tr>';
+  });
+  document.getElementById('preview-table').innerHTML = html+'</tbody>';
+}
+
+// ============================================================
+// DOWNLOAD / EXPORT
+// ============================================================
+function downloadLextrackJSON(){
+  if(!lexCases.length){showMsg('Nothing to download — parse a file first.','err');return;}
+  var blob = new Blob([JSON.stringify(lexCases,null,2)],{type:'application/json'});
+  dl(blob,'lextrack_cases_'+todayStr()+'.json');
+  showMsg('<strong>'+lexCases.length+' cases</strong> downloaded as LexTrack JSON. Import this file into LexTrack using &#8659; Import Cases button.','ok');
+}
+
+function downloadRawJSON(){
+  if(!rawCases.length){showMsg('Nothing to download.','err');return;}
+  var blob = new Blob([JSON.stringify(rawCases,null,2)],{type:'application/json'});
+  dl(blob,'cases_raw_'+todayStr()+'.json');
+  showMsg('Raw JSON downloaded.','ok');
+}
+
+function copyLextrackJSON(){
+  var text = JSON.stringify(lexCases,null,2);
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(function(){showMsg('LexTrack JSON copied to clipboard. Paste in LexTrack Import &rarr; Paste Data.','ok');}).catch(function(){fallbackCopy(text);});
+  } else fallbackCopy(text);
+}
+
+function fallbackCopy(text){
+  var ta=document.createElement('textarea');
+  ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+  showMsg('Copied to clipboard!','ok');
+}
+
+function downloadCSV(){
+  if(!lexCases.length){showMsg('Nothing to download.','err');return;}
+  var cols = ['title','cnr','caseNo','client','opposite','court','caseType','nextDate','stage','status','sections','remarks'];
+  var escCell = function(v){if(!v&&v!==0)return'';var s=String(v);return(s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s;};
+  var csv = [cols.join(',')].concat(lexCases.map(function(r){return cols.map(function(c){return escCell(r[c]);}).join(',');})).join('\n');
+  var blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  dl(blob,'lextrack_cases_'+todayStr()+'.csv');
+  showMsg('CSV downloaded. Open in Excel, verify, then import CSV back into LexTrack.','ok');
+}
+
+function downloadTemplate(){
+  var headers = 'Title,CaseNo,CNR,Client,Opposite,Court,CaseType,NextDate,Stage,Status,Sections,Remarks';
+  var sample  = 'Suresh Kumar vs. Tarsem Singh,CS-254-2022,PBPTA00012022,Suresh Kumar,Tarsem Singh,"Civil Judge (Jr. Div.) Rajpura",Civil Suit,2026-06-15,Arguments,Active,Order 39 Rule 1-2 CPC,Injunction matter';
+  var sample2 = 'State of Punjab vs. Ram Singh,CC-123-2023,PBPTA10012023,State of Punjab,Ram Singh,JMFC Rajpura,Criminal Case,2026-07-10,Evidence,Active,Sec 420 IPC,';
+  var csv = headers+'\n'+sample+'\n'+sample2+'\n';
+  var blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  dl(blob,'LexTrack_Import_Template.csv');
+  showMsg('Template downloaded. Fill your cases in Excel, save as CSV, then upload here.','ok');
+}
+
+function dl(blob,name){
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
+}
+
+function clearAll(){
+  rawCases=[];lexCases=[];colMapping={};sourceFields=[];
+  document.getElementById('paste-area').value='';
+  document.getElementById('msg-area').innerHTML='';
+  document.getElementById('results').classList.add('hidden');
+  setProgress(0,'');
+  document.querySelectorAll('#file-input-main,.fmt-card input').forEach(function(el){el.value='';});
 }
 </script>
 </body>
